@@ -53,7 +53,7 @@ async def process_aadhaar_update(
         raise HTTPException(status_code=400, detail="Document proof is required")
 
     from app.api.verification_agent import verify_document
-    is_valid, error_message = verify_document(document, service_type, proof_name, db)
+    is_valid, error_message = verify_document(document, service_type, proof_name, new_value, db)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_message)
 

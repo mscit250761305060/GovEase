@@ -75,7 +75,7 @@ function AadhaarNameUpdate() {
       setStep(4);
     } catch (err) {
       setError(err.message);
-      if (err.message.includes("upload the correct document") || err.message.includes("proof configuration found") || err.message.includes("upload a valid proof") || err.message.includes("format is not valid") || err.message.includes("available in English")) {
+      if (err.message.includes("upload the correct document") || err.message.includes("proof configuration found") || err.message.includes("upload a valid proof") || err.message.includes("format is not valid") || err.message.includes("available in English") || err.message.includes("does not match the information")) {
         setStep(2);
       }
     } finally {
