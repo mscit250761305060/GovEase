@@ -44,9 +44,24 @@ class MockDLRecord(Base):
 class AadhaarUpdateHistory(Base):
     __tablename__ = "aadhaar_update_history"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
     aadhaar_number: Mapped[str] = mapped_column(String(12), nullable=False, index=True)
     service_type: Mapped[str] = mapped_column(String(50), nullable=False)
     old_value: Mapped[str] = mapped_column(String(255), nullable=True)
     new_value: Mapped[str] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="Approved")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+class AadhaarUpdateApplication(Base):
+    __tablename__ = "aadhaar_update_applications"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
+    aadhaar_number: Mapped[str] = mapped_column(String(12), nullable=False, index=True)
+    old_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    new_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    dob: Mapped[str] = mapped_column(String(20), nullable=False)
+    mobile: Mapped[str] = mapped_column(String(15), nullable=False)
+    proof_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    document_path: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="Approved")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

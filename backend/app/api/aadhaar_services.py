@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth.dependencies import get_current_aadhaar_user
-from app.models.mock_government import MockAadhaarRecord, AadhaarUpdateHistory
+from app.models.mock_government import MockAadhaarRecord, AadhaarUpdateHistory, AadhaarUpdateApplication
+import os
+import shutil
+import uuid
 
 from app.auth.dependencies import get_current_user
 from app.models.user import User
@@ -26,14 +29,16 @@ async def get_proof_configs(
 
 @router.get("/my-record")
 async def get_my_aadhaar_record(
-    current_user: MockAadhaarRecord = Depends(get_current_aadhaar_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == current_user.aadhaar_number).first()
-    if not record:
-        # If the demo user doesn't have a linked Aadhaar, return a default mock record so the presentation doesn't break
-        record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == "1234 5678 91").first()
+    # Get the last updated Aadhaar record for this user session
+    history = db.query(AadhaarUpdateHistory).filter(AadhaarUpdateHistory.user_id == current_user.id).order_by(AadhaarUpdateHistory.created_at.desc()).first()
     
+    if history:
+        record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == history.aadhaar_number).first()
+    else:
+        record = db.query(MockAadhaarRecord).first() # Fallback demo record if they haven't submitted anything yet
     if not record:
          raise HTTPException(status_code=404, detail="Aadhaar record not found for this user")
          
@@ -45,8 +50,12 @@ async def process_aadhaar_update(
     service_type: str = Form(...),
     proof_name: str = Form(...),
     new_value: str = Form(...),
+    old_name: str = Form(""),
+    dob: str = Form(""),
+    mobile: str = Form(""),
+    aadhaar_number: str = Form(""),
     document: UploadFile = File(...),
-    current_user: MockAadhaarRecord = Depends(get_current_aadhaar_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if not document:
@@ -57,12 +66,24 @@ async def process_aadhaar_update(
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_message)
 
-    aadhaar_record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == current_user.aadhaar_number).first()
-    if not aadhaar_record:
-        aadhaar_record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == "1234 5678 91").first()
+    if not aadhaar_number:
+        raise HTTPException(status_code=400, detail="Aadhaar number is required")
 
+    aadhaar_record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == aadhaar_number).first()
+    
+    # Auto-create mock record on the fly so any Aadhaar Number works for the demo!
     if not aadhaar_record:
-         raise HTTPException(status_code=404, detail="Aadhaar record not found")
+        aadhaar_record = MockAadhaarRecord(
+            aadhaar_number=aadhaar_number,
+            name=old_name if old_name else current_user.full_name,
+            dob=dob if dob else "01/01/1990",
+            address="Demo Address, India",
+            gender="Unspecified",
+            mobile=mobile if mobile else current_user.mobile
+        )
+        db.add(aadhaar_record)
+        db.commit()
+        db.refresh(aadhaar_record)
 
     # Proceed with instant update since payment was successful (on frontend)
     old_value = None
@@ -89,13 +110,42 @@ async def process_aadhaar_update(
 
     # Record the update in history
     update_history = AadhaarUpdateHistory(
-        aadhaar_number=current_user.aadhaar_number,
+        user_id=current_user.id,
+        aadhaar_number=aadhaar_number,
         service_type=service_type,
         old_value=str(old_value) if old_value else "Not Provided",
         new_value=new_value,
         status="Approved"
     )
     db.add(update_history)
+    
+    # Save the document to the file system securely
+    upload_dir = "storage/aadhaar_proofs"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename to prevent overwriting
+    ext = document.filename.split(".")[-1]
+    safe_filename = f"{uuid.uuid4().hex}.{ext}"
+    file_path = os.path.join(upload_dir, safe_filename)
+    
+    document.file.seek(0)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(document.file, buffer)
+        
+    # Store complete application data in the new table
+    update_application = AadhaarUpdateApplication(
+        user_id=current_user.id,
+        aadhaar_number=aadhaar_number,
+        old_name=old_name,
+        new_name=new_value,
+        dob=dob,
+        mobile=mobile,
+        proof_name=proof_name,
+        document_path=file_path,
+        status="Approved"
+    )
+    db.add(update_application)
+    
     db.commit()
     db.refresh(aadhaar_record)
 
@@ -107,11 +157,11 @@ async def process_aadhaar_update(
 
 @router.get("/my-applications")
 async def get_my_applications(
-    current_user: MockAadhaarRecord = Depends(get_current_aadhaar_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     history = db.query(AadhaarUpdateHistory).filter(
-        AadhaarUpdateHistory.aadhaar_number == current_user.aadhaar_number
+        AadhaarUpdateHistory.user_id == current_user.id
     ).order_by(AadhaarUpdateHistory.created_at.desc()).all()
     
     return history
@@ -124,7 +174,7 @@ class SMSRequest(BaseModel):
 @router.post("/send-sms")
 async def send_sms_notification(
     request: SMSRequest,
-    current_user: MockAadhaarRecord = Depends(get_current_aadhaar_user)
+    current_user: User = Depends(get_current_user)
 ):
     # In a real app, integrate with Twilio or AWS SNS here
     masked_mobile = "******" + current_user.mobile[-4:] if current_user.mobile else "your registered mobile number"

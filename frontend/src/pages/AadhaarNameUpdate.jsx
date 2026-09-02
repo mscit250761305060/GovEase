@@ -58,6 +58,10 @@ function AadhaarNameUpdate() {
       formData.append("service_type", "name-update");
       formData.append("proof_name", form.proof_name);
       formData.append("new_value", form.new_name);
+      formData.append("old_name", form.old_name);
+      formData.append("dob", form.dob);
+      formData.append("mobile", form.mobile);
+      formData.append("aadhaar_number", form.aadhaar_number);
       formData.append("document", form.document);
 
       const response = await fetch("http://127.0.0.1:8000/api/aadhaar/process-update", {
