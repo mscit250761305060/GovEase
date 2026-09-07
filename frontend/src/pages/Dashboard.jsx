@@ -59,43 +59,43 @@ function Dashboard() {
             <div className="card">
               <h3>Address Update</h3>
               <p>Update your residential address in the database.</p>
-              <Link to="/application/aadhaar/address-update" className="btn btn-primary">Update Address</Link>
+              <Link to="/services/aadhaar/address-update" className="btn btn-primary">Update Address</Link>
             </div>
 
             <div className="card">
               <h3>Date of Birth Update</h3>
               <p>Correct your registered Date of Birth.</p>
-              <Link to="/application/aadhaar/dob-update" className="btn btn-primary">Update DOB</Link>
+              <Link to="/services/aadhaar/dob-update" className="btn btn-primary">Update DOB</Link>
             </div>
 
             <div className="card">
               <h3>Gender Update</h3>
               <p>Correct your registered gender.</p>
-              <Link to="/application/aadhaar/gender-update" className="btn btn-primary">Update Gender</Link>
+              <Link to="/services/aadhaar/gender-update" className="btn btn-primary">Update Gender</Link>
             </div>
 
             <div className="card">
               <h3>Mobile Update</h3>
               <p>Link a new mobile number to your Aadhaar.</p>
-              <Link to="/application/aadhaar/mobile-update" className="btn btn-primary">Update Mobile</Link>
+              <Link to="/services/aadhaar/mobile-update" className="btn btn-primary">Update Mobile</Link>
             </div>
 
             <div className="card">
               <h3>Email Update</h3>
               <p>Link or update your registered email address.</p>
-              <Link to="/application/aadhaar/email-update" className="btn btn-primary">Update Email</Link>
+              <Link to="/services/aadhaar/email-update" className="btn btn-primary">Update Email</Link>
             </div>
 
             <div className="card">
               <h3>Photo / Biometrics Update</h3>
               <p>Update your photograph and biometrics data.</p>
-              <Link to="/application/aadhaar/biometric-update" className="btn btn-primary">Update Biometrics</Link>
+              <Link to="/services/aadhaar/biometric-update" className="btn btn-primary">Update Biometrics</Link>
             </div>
 
             <div className="card">
               <h3>Virtual ID (VID) Generator</h3>
               <p>Generate or retrieve your Virtual ID.</p>
-              <Link to="/application/aadhaar/vid-generator" className="btn btn-primary">Generate VID</Link>
+              <Link to="/services/aadhaar/vid-generator" className="btn btn-primary">Generate VID</Link>
             </div>
           </div>
         </div>

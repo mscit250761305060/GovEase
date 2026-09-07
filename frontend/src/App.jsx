@@ -7,8 +7,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Services from "./pages/Services";
 import AadhaarServices from "./pages/AadhaarServices";
-import AadhaarNameUpdate from "./pages/AadhaarNameUpdate";
-import ApplicationForm from "./pages/ApplicationForm";
+import AadhaarServiceUpdate from "./pages/AadhaarServiceUpdate";
 import MyApplications from "./pages/MyApplications";
 import ApplicationDetail from "./pages/ApplicationDetail";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -46,17 +45,12 @@ function App() {
         />
 
         <Route
-          path="/services/aadhaar/name-update"
+          path="/services/aadhaar/:serviceSlug"
           element={
             <ProtectedRoute>
-              <AadhaarNameUpdate />
+              <AadhaarServiceUpdate />
             </ProtectedRoute>
           }
-        />
-
-        <Route
-          path="/application/aadhaar/:serviceSlug"
-          element={<ApplicationForm />}
         />
 
         <Route

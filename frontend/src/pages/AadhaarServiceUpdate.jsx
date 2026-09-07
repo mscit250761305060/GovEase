@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
-function AadhaarNameUpdate() {
+function AadhaarServiceUpdate() {
   const navigate = useNavigate();
+  const { serviceSlug } = useParams();
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     aadhaar_number: "",
-    old_name: "",
-    new_name: "",
+    old_value: "",
+    new_value: "",
     dob: "",
     mobile: "",
     proof_name: "",
@@ -21,11 +22,24 @@ function AadhaarNameUpdate() {
   const [message, setMessage] = useState("");
   const [proofConfigs, setProofConfigs] = useState([]);
 
+  // Title and label mapping
+  const serviceDetails = {
+    "name-update": { title: "Aadhaar Name Update", currentLabel: "Current Name", newLabel: "New Name (as per proof)" },
+    "address-update": { title: "Aadhaar Address Update", currentLabel: "Current Address", newLabel: "New Address (as per proof)" },
+    "dob-update": { title: "Aadhaar Date of Birth Update", currentLabel: "Current Date of Birth", newLabel: "New Date of Birth (as per proof)" },
+    "gender-update": { title: "Aadhaar Gender Update", currentLabel: "Current Gender", newLabel: "New Gender (as per proof)" },
+    "mobile-update": { title: "Aadhaar Mobile Update", currentLabel: "Current Mobile Number", newLabel: "New Mobile Number" },
+    "email-update": { title: "Aadhaar Email Update", currentLabel: "Current Email", newLabel: "New Email Address" },
+    "biometric-update": { title: "Aadhaar Biometric Update", currentLabel: "Current Details", newLabel: "New Details" },
+  };
+
+  const details = serviceDetails[serviceSlug] || { title: "Aadhaar Update", currentLabel: "Current Value", newLabel: "New Value" };
+
   useEffect(() => {
     async function loadConfigs() {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com";
-        const response = await fetch(`${apiUrl}/api/aadhaar/proof-configs?service_type=name-update`);
+        const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+        const response = await fetch(`${apiUrl}/api/aadhaar/proof-configs?service_type=${serviceSlug}`);
         const data = await response.json();
         setProofConfigs(data);
       } catch (err) {
@@ -33,7 +47,7 @@ function AadhaarNameUpdate() {
       }
     }
     loadConfigs();
-  }, []);
+  }, [serviceSlug]);
 
   function handleChange(e) {
     if (e.target.name === "document") {
@@ -56,16 +70,16 @@ function AadhaarNameUpdate() {
     try {
       const token = localStorage.getItem("govease_access_token");
       const formData = new FormData();
-      formData.append("service_type", "name-update");
+      formData.append("service_type", serviceSlug);
       formData.append("proof_name", form.proof_name);
-      formData.append("new_value", form.new_name);
-      formData.append("old_name", form.old_name);
+      formData.append("new_value", form.new_value);
+      formData.append("old_name", form.old_value);
       formData.append("dob", form.dob);
       formData.append("mobile", form.mobile);
       formData.append("aadhaar_number", form.aadhaar_number);
       formData.append("document", form.document);
 
-      const apiUrl = import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
       const response = await fetch(`${apiUrl}/api/aadhaar/process-update`, {
         method: "POST",
         headers: {
@@ -81,7 +95,7 @@ function AadhaarNameUpdate() {
       setStep(4);
     } catch (err) {
       setError(err.message);
-      if (err.message.includes("upload the correct document") || err.message.includes("proof configuration found") || err.message.includes("upload a valid proof") || err.message.includes("format is not valid") || err.message.includes("available in English") || err.message.includes("does not match the information")) {
+      if (err.message.includes("upload the correct document") || err.message.includes("proof configuration found") || err.message.includes("upload a valid proof") || err.message.includes("format is not valid") || err.message.includes("available in English") || err.message.includes("does not match the information") || err.message.includes("fail the verification") || err.message.includes("fail")) {
         setStep(2);
       }
     } finally {
@@ -97,14 +111,14 @@ function AadhaarNameUpdate() {
     setTimeout(async () => {
       try {
         const token = localStorage.getItem("govease_access_token");
-        const apiUrl = import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
         await fetch(`${apiUrl}/api/aadhaar/send-sms`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ message: "Your Aadhaar name update is complete." })
+          body: JSON.stringify({ message: `Your ${details.title} is complete.` })
         });
         
         setMessage("Payment successful! SMS notification sent.");
@@ -125,7 +139,7 @@ function AadhaarNameUpdate() {
       <section className="section">
         <div className="container">
           <div className="form-card">
-            <h1>Aadhaar Name Update</h1>
+            <h1>{details.title}</h1>
             
             {/* Progress Bar */}
             <div style={{display:"flex", justifyContent:"space-between", marginBottom:"30px", fontSize:"0.8rem", color:"#64748b"}}>
@@ -150,12 +164,12 @@ function AadhaarNameUpdate() {
                   <input type="text" name="aadhaar_number" value={form.aadhaar_number} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
-                  <label>Old Name</label>
-                  <input type="text" name="old_name" value={form.old_name} onChange={handleChange} required />
+                  <label>{details.currentLabel}</label>
+                  <input type="text" name="old_value" value={form.old_value} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
-                  <label>New Name (as per proof)</label>
-                  <input type="text" name="new_name" value={form.new_name} onChange={handleChange} required />
+                  <label>{details.newLabel}</label>
+                  <input type="text" name="new_value" value={form.new_value} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
                   <label>Date of Birth</label>
@@ -175,13 +189,21 @@ function AadhaarNameUpdate() {
                   <label>Select Proof Type</label>
                   <select name="proof_name" value={form.proof_name} onChange={handleChange} required style={{width: "100%", padding: "10px", borderRadius: "4px", border: "1px solid #cbd5e1"}}>
                     <option value="">-- Select Proof Type --</option>
-                    <option value="Passport">Passport</option>
-                    <option value="Voter ID (EPIC)">Voter ID (EPIC)</option>
-                    <option value="PAN Card">PAN Card</option>
-                    <option value="Driving Licence">Driving Licence</option>
-                    <option value="Birth Certificate">Birth Certificate</option>
-                    <option value="Marriage Certificate">Marriage Certificate</option>
-                    <option value="Gazette Notification">Gazette Notification</option>
+                    {proofConfigs.map(c => (
+                      <option key={c.id} value={c.proof_name}>{c.proof_name}</option>
+                    ))}
+                    {/* Fallbacks if proofConfigs fail to load */}
+                    {proofConfigs.length === 0 && (
+                      <>
+                        <option value="Passport">Passport</option>
+                        <option value="Voter ID (EPIC)">Voter ID (EPIC)</option>
+                        <option value="PAN Card">PAN Card</option>
+                        <option value="Driving Licence">Driving Licence</option>
+                        <option value="Birth Certificate">Birth Certificate</option>
+                        <option value="Marriage Certificate">Marriage Certificate</option>
+                        <option value="Gazette Notification">Gazette Notification</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 
@@ -189,7 +211,7 @@ function AadhaarNameUpdate() {
                   <div style={{marginTop: "10px", marginBottom: "15px", background: "#f8fafc", padding: "10px", borderRadius: "5px", border: "1px solid #e2e8f0"}}>
                      <p style={{fontSize: "0.9rem", color: "#64748b", marginBottom: "10px"}}><strong>Format Reference:</strong> Ensure your document's layout matches this standard format:</p>
                      <img 
-                       src={`${import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com"}/${proofConfigs.find(c => c.proof_name === form.proof_name).reference_image_path}`} 
+                       src={`${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"}/${proofConfigs.find(c => c.proof_name === form.proof_name).reference_image_path}`} 
                        alt={`Demo ${form.proof_name}`} 
                        style={{maxWidth: "100%", maxHeight: "250px", border: "1px solid #cbd5e1", borderRadius: "5px", display: "block", margin: "0 auto"}} 
                      />
@@ -251,4 +273,4 @@ function AadhaarNameUpdate() {
   );
 }
 
-export default AadhaarNameUpdate;
+export default AadhaarServiceUpdate;
