@@ -1,8 +1,15 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
 function ApplicationForm() {
+  const { serviceSlug } = useParams();
   const [submitted, setSubmitted] = useState(false);
+
+  const formatTitle = (slug) => {
+    if (!slug) return "Aadhaar Name Update";
+    return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') + ' Application';
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -47,7 +54,7 @@ function ApplicationForm() {
 
       <div className="form-container">
         <div className="form-card">
-          <h1>Aadhaar Name Update</h1>
+          <h1>{formatTitle(serviceSlug)}</h1>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">

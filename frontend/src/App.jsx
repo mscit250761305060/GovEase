@@ -55,7 +55,7 @@ function App() {
         />
 
         <Route
-          path="/application/aadhaar/name-update"
+          path="/application/aadhaar/:serviceSlug"
           element={<ApplicationForm />}
         />
 
