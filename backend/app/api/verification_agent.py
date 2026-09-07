@@ -44,21 +44,29 @@ def verify_document(document: UploadFile, service_type: str, proof_name: str, ne
         mime_type = f"image/{ext}" if ext in ["jpg", "jpeg", "png"] else "application/pdf"
 
     # 4. Construct Prompt
+    # Define strict rules based on the service type
+    service_rules = {
+        "name-update": f"The user wants to update their NAME to '{new_value}'. STRICT RULE: You MUST scan the document and verify that the exact name '{new_value}' is explicitly printed on the document. If the document shows a different name or spelling, fail the verification.",
+        "dob-update": f"The user wants to update their DATE OF BIRTH to '{new_value}'. STRICT RULE: You MUST scan the document and verify that the exact Date of Birth '{new_value}' is printed. If it does not match perfectly, fail the verification.",
+        "address-update": f"The user wants to update their ADDRESS to '{new_value}'. STRICT RULE: You MUST scan the document and verify that the address '{new_value}' is present. If the address on the document does not match, fail the verification.",
+        "gender-update": f"The user wants to update their GENDER to '{new_value}'. STRICT RULE: You MUST verify that the gender '{new_value}' is clearly indicated on the document. If it doesn't match, fail the verification."
+    }
+    
+    specific_rule = service_rules.get(service_type, f"The user is applying for a '{service_type}' and wants to change their details to: '{new_value}'. STRICT RULE: You MUST verify that the exact value '{new_value}' is present on the document.")
+
     prompt = f"""
-You are a highly accurate Government Document Verification Agent.
+You are a highly accurate, strict Government Document Verification Agent.
 Your task is to analyze the uploaded document and verify it strictly against the user's requirements.
 
 Requirements:
 1. Document Type Check: Verify that this document is indeed a valid '{proof_name}'.
-2. Content Check: The user is applying for a '{service_type}' and wants to change their details to: '{new_value}'.
-   - You MUST scan the document and verify that the exact name/value '{new_value}' is present on the document in the relevant field.
-   - For example, if it's a name change to 'Zeel Maheshbhai Khokhneshiya', that exact name must be printed on the document. If the document has a different name, fail the verification.
+2. Content Match Check: {specific_rule}
 
 Special Rules:
 - If the document type is 'Birth Certificate': You MUST verify that all required fields are printed in BOTH English and Gujarati. If any required field is missing either language, fail the verification.
 
 If all requirements match perfectly, return is_valid: true and an empty error_message.
-If any requirement fails, return is_valid: false and a clear, descriptive error_message explaining why it failed (e.g., 'The name on the document does not match the requested new name', or 'The birth certificate is missing required Gujarati fields.').
+If ANY requirement fails, return is_valid: false and a clear, descriptive error_message explaining exactly why it failed (e.g., 'The name on the document does not match the requested new name', or 'The uploaded document is not a valid {proof_name}').
 """
 
     try:
