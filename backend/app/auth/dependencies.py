@@ -100,3 +100,44 @@ def get_current_aadhaar_user(
         )
 
     return record
+
+def get_active_user_session(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    token = credentials.credentials
+    payload = decode_access_token(token)
+
+    if not payload:
+        print("TOKEN DECODE FAILED")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        
+    role = payload.get("role")
+    sub = payload.get("sub")
+    
+    if not sub:
+        print("NO SUB IN PAYLOAD")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token")
+        
+    if role == "aadhaar_user":
+        record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == sub).first()
+        if not record:
+            print("AADHAAR RECORD NOT FOUND FOR SUB:", sub)
+            raise HTTPException(status_code=401, detail="Aadhaar record not found")
+        return {"type": "aadhaar", "aadhaar_number": sub, "record": record}
+    elif role in ["citizen", "admin"]:
+        try:
+            user_id = int(sub)
+        except ValueError:
+            print("VALUE ERROR FOR USER ID:", sub)
+            raise HTTPException(status_code=401, detail="Invalid user ID in token")
+            
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user or not user.is_active:
+            print("USER NOT FOUND OR INACTIVE FOR ID:", user_id)
+            raise HTTPException(status_code=401, detail="User not found or inactive")
+            
+        return {"type": "citizen", "user_id": user_id, "user": user}
+    else:
+        print("UNKNOWN ROLE:", role)
+        raise HTTPException(status_code=401, detail="Unknown role")

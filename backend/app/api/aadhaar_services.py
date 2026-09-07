@@ -7,7 +7,7 @@ import os
 import shutil
 import uuid
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_active_user_session
 from app.models.user import User
 
 router = APIRouter(
@@ -29,16 +29,18 @@ async def get_proof_configs(
 
 @router.get("/my-record")
 async def get_my_aadhaar_record(
-    current_user: User = Depends(get_current_user),
+    session_info: dict = Depends(get_active_user_session),
     db: Session = Depends(get_db)
 ):
-    # Get the last updated Aadhaar record for this user session
-    history = db.query(AadhaarUpdateHistory).filter(AadhaarUpdateHistory.user_id == current_user.id).order_by(AadhaarUpdateHistory.created_at.desc()).first()
-    
-    if history:
-        record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == history.aadhaar_number).first()
+    if session_info["type"] == "citizen":
+        # Get the last updated Aadhaar record for this user session
+        history = db.query(AadhaarUpdateHistory).filter(AadhaarUpdateHistory.user_id == session_info["user_id"]).order_by(AadhaarUpdateHistory.created_at.desc()).first()
+        if history:
+            record = db.query(MockAadhaarRecord).filter(MockAadhaarRecord.aadhaar_number == history.aadhaar_number).first()
+        else:
+            record = db.query(MockAadhaarRecord).first() # Fallback demo record if they haven't submitted anything yet
     else:
-        record = db.query(MockAadhaarRecord).first() # Fallback demo record if they haven't submitted anything yet
+        record = session_info["record"]
     if not record:
          raise HTTPException(status_code=404, detail="Aadhaar record not found for this user")
          
@@ -55,7 +57,7 @@ async def process_aadhaar_update(
     mobile: str = Form(""),
     aadhaar_number: str = Form(""),
     document: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    session_info: dict = Depends(get_active_user_session),
     db: Session = Depends(get_db)
 ):
     if not document:
@@ -73,13 +75,15 @@ async def process_aadhaar_update(
     
     # Auto-create mock record on the fly so any Aadhaar Number works for the demo!
     if not aadhaar_record:
+        full_name = session_info["user"].full_name if session_info["type"] == "citizen" else "Demo User"
+        mobile_num = session_info["user"].mobile if session_info["type"] == "citizen" else "9999999999"
         aadhaar_record = MockAadhaarRecord(
             aadhaar_number=aadhaar_number,
-            name=old_name if old_name else current_user.full_name,
+            name=old_name if old_name else full_name,
             dob=dob if dob else "01/01/1990",
             address="Demo Address, India",
             gender="Unspecified",
-            mobile=mobile if mobile else current_user.mobile
+            mobile=mobile if mobile else mobile_num
         )
         db.add(aadhaar_record)
         db.commit()
@@ -110,7 +114,7 @@ async def process_aadhaar_update(
 
     # Record the update in history
     update_history = AadhaarUpdateHistory(
-        user_id=current_user.id,
+        user_id=session_info.get("user_id"),
         aadhaar_number=aadhaar_number,
         service_type=service_type,
         old_value=str(old_value) if old_value else "Not Provided",
@@ -134,7 +138,7 @@ async def process_aadhaar_update(
         
     # Store complete application data in the new table
     update_application = AadhaarUpdateApplication(
-        user_id=current_user.id,
+        user_id=session_info.get("user_id"),
         aadhaar_number=aadhaar_number,
         old_name=old_name,
         new_name=new_value,
@@ -157,12 +161,17 @@ async def process_aadhaar_update(
 
 @router.get("/my-applications")
 async def get_my_applications(
-    current_user: User = Depends(get_current_user),
+    session_info: dict = Depends(get_active_user_session),
     db: Session = Depends(get_db)
 ):
-    history = db.query(AadhaarUpdateHistory).filter(
-        AadhaarUpdateHistory.user_id == current_user.id
-    ).order_by(AadhaarUpdateHistory.created_at.desc()).all()
+    if session_info["type"] == "citizen":
+        history = db.query(AadhaarUpdateHistory).filter(
+            AadhaarUpdateHistory.user_id == session_info["user_id"]
+        ).order_by(AadhaarUpdateHistory.created_at.desc()).all()
+    else:
+        history = db.query(AadhaarUpdateHistory).filter(
+            AadhaarUpdateHistory.aadhaar_number == session_info["aadhaar_number"]
+        ).order_by(AadhaarUpdateHistory.created_at.desc()).all()
     
     return history
 
@@ -174,10 +183,11 @@ class SMSRequest(BaseModel):
 @router.post("/send-sms")
 async def send_sms_notification(
     request: SMSRequest,
-    current_user: User = Depends(get_current_user)
+    session_info: dict = Depends(get_active_user_session)
 ):
     # In a real app, integrate with Twilio or AWS SNS here
-    masked_mobile = "******" + current_user.mobile[-4:] if current_user.mobile else "your registered mobile number"
+    mobile = session_info["user"].mobile if session_info["type"] == "citizen" else session_info["record"].mobile
+    masked_mobile = "******" + mobile[-4:] if mobile else "your registered mobile number"
     return {
         "status": "success",
         "message": f"SMS sent successfully to {masked_mobile}",

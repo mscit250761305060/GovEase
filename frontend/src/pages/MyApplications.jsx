@@ -19,7 +19,8 @@ function MyApplications() {
       setApplications(data);
     } catch (err) {
       setError(err.message);
-      if (err.message.includes("Not authenticated")) {
+      if (err.message.includes("Not authenticated") || err.message.includes("Invalid or expired token") || err.message.includes("Invalid authentication token")) {
+        localStorage.removeItem("govease_access_token");
         navigate("/login");
       }
     } finally {
