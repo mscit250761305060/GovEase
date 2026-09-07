@@ -63,6 +63,10 @@ async def process_aadhaar_update(
     if not document:
         raise HTTPException(status_code=400, detail="Document proof is required")
 
+    # Sanitize inputs to prevent database truncation errors
+    aadhaar_number = aadhaar_number.replace(" ", "").replace("-", "") if aadhaar_number else ""
+    mobile = mobile.replace(" ", "").replace("-", "") if mobile else ""
+
     from app.api.verification_agent import verify_document
     is_valid, error_message = verify_document(document, service_type, proof_name, new_value, db)
     if not is_valid:
