@@ -24,7 +24,7 @@ function AadhaarNameUpdate() {
   useEffect(() => {
     async function loadConfigs() {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+        const apiUrl = import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com";
         const response = await fetch(`${apiUrl}/api/aadhaar/proof-configs?service_type=name-update`);
         const data = await response.json();
         setProofConfigs(data);
@@ -65,7 +65,7 @@ function AadhaarNameUpdate() {
       formData.append("aadhaar_number", form.aadhaar_number);
       formData.append("document", form.document);
 
-      const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com";
       const response = await fetch(`${apiUrl}/api/aadhaar/process-update`, {
         method: "POST",
         headers: {
@@ -97,7 +97,7 @@ function AadhaarNameUpdate() {
     setTimeout(async () => {
       try {
         const token = localStorage.getItem("govease_access_token");
-        const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+        const apiUrl = import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com";
         await fetch(`${apiUrl}/api/aadhaar/send-sms`, {
           method: "POST",
           headers: {
@@ -189,7 +189,7 @@ function AadhaarNameUpdate() {
                   <div style={{marginTop: "10px", marginBottom: "15px", background: "#f8fafc", padding: "10px", borderRadius: "5px", border: "1px solid #e2e8f0"}}>
                      <p style={{fontSize: "0.9rem", color: "#64748b", marginBottom: "10px"}}><strong>Format Reference:</strong> Ensure your document's layout matches this standard format:</p>
                      <img 
-                       src={`${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"}/${proofConfigs.find(c => c.proof_name === form.proof_name).reference_image_path}`} 
+                       src={`${import.meta.env.VITE_API_URL || "https://govease-9rff.onrender.com"}/${proofConfigs.find(c => c.proof_name === form.proof_name).reference_image_path}`} 
                        alt={`Demo ${form.proof_name}`} 
                        style={{maxWidth: "100%", maxHeight: "250px", border: "1px solid #cbd5e1", borderRadius: "5px", display: "block", margin: "0 auto"}} 
                      />
